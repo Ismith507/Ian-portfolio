@@ -1,3 +1,5 @@
+import './globals.css';
+
 export default function RootLayout({
     children,
 }: {
@@ -5,18 +7,18 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en">
-            <body>
+            <body className="background: bg-slate-700">
                 <main>
                     <nav>
                         <ul className="flex">
                             <li className="mr-6">
-                                <a className="text-white hover:text-blue-800" href="/(home)">Home</a>
+                                <a className="text-white hover:text-blue-800" href="/">Home</a>
                             </li>
                             <li className="mr-6">
-                                <a className="text-white hover:text-blue-800" href="/(portfolio)">My projects</a>
+                                <a className="text-white hover:text-blue-800" href="/pages/projects">My projects</a>
                             </li>
                             <li className="mr-6">
-                                <a className="text-white hover:text-blue-800" href="/(artwork)">artwork</a>
+                                <a className="text-white hover:text-blue-800" href="/pages/artwork">Artwork</a>
                             </li>
                             {/*<li className="mr-6">
                                 <a className="text-gray-400 cursor-not-allowed" href="#">contact</a>
