@@ -1,7 +1,77 @@
-import { artType } from '@/schema/artType'
-import { authorType } from '@/schema/authorType'
 import { type SchemaTypeDefinition } from 'sanity'
-
+import {defineType} from 'sanity'
+import {defineField} from 'sanity'
 export const schema: { types: SchemaTypeDefinition[] } = {
-  types: [artType, authorType],
+  types: [
+    defineType({
+      name: 'art',
+      title: 'Art',
+      type: 'document',
+
+      fields: [
+        defineField({
+          title: 'Content',
+          name: 'content',
+          type: 'image',
+          options: {
+            hotspot: true
+          }
+        }),
+          defineField({
+            name: 'title',
+            title: 'Title',
+            type: 'string'
+        }),
+        defineField({
+          name: 'caption',
+          type: 'string',
+          title: 'Caption',
+        }),
+         defineField({
+          name: 'attribution',
+          type: 'string',
+          title: 'Attribution',
+        })
+      ],
+    }),
+
+    defineType({
+      name: 'author',
+      title: 'Author',
+      type: 'document',
+      
+      fields: [
+        defineField({
+          name: 'name',
+          title: 'Name',
+          type: 'string',
+        }),
+        defineField({
+          name: 'slug',
+          title: 'Slug',
+          type: 'slug'
+        })
+      ]
+    }),
+
+    defineType({
+      name: 'post',
+      title: 'Post',
+      type: 'document',
+      
+      fields: [
+        defineField({
+          name: 'content',
+          title: 'Content',
+          type: 'string',
+        }),
+        defineField({
+          name: 'slug',
+          title: 'Slug',
+          type: 'slug'
+        })
+      ]
+    })
+
+  ],
 }
