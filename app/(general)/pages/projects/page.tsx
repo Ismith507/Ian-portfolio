@@ -15,13 +15,13 @@ const mainLinks = [
 
 export default function portfolio() {
     return (
-        <div>
-            <h1 className="flex flex-col items-center text-xl text-white font-bold mt-12">My Work</h1>
-                <div className="mb-32 mr-32 grid text-center lg:mb-0 lg:grid-cols-4 lg:text-left">
-                    {mainLinks.map((props) => (
-                        <LinkCard {...props} key={props.href} />
+        <div className="flex flex-col">
+            <h1 className="flex flex-col items-center text-2xl text-white font-bold mt-12">My Work</h1>
+            <div className="ml-32 flex flex-col text-center lg:mb-0 lg:grid-cols-4 lg:text-left">
+                {mainLinks.map((props) => (
+                    <LinkCard {...props} key={props.href} />
                     ))}
-                </div>
+            </div>
         </div>
     );
 }

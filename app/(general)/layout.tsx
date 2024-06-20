@@ -7,24 +7,25 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en">
-            <body className="background: bg-slate-700">
+            <body className="background: bg-slate-700 ">
                 <main>
-                    <nav>
+                    <nav className="flex flex-row justify-center m-10 text-xl">
                         <ul className="flex">
-                            <li className="mr-6">
-                                <a className="text-white hover:text-blue-800" href="/">Home</a>
+                            <li className="mx-6">
+                                <a className="text-white border-transparent border-8 hover:bg-slate-600 hover:rounded-lg hover:border-slate-600 hover:border-8" href="/">Home</a>
                             </li>
-                            <li className="mr-6">
-                                <a className="text-white hover:text-blue-800" href="/pages/projects">My projects</a>
+                            <li className="mx-6">
+                                <a className="text-white border-transparent border-8 hover:bg-slate-600 hover:rounded-lg hover:border-slate-600 hover:border-8" href="/pages/projects">My projects</a>
                             </li>
-                            <li className="mr-6">
-                                <a className="text-white hover:text-blue-800" href="/pages/artwork">Artwork</a>
+                            <li className="mx-6">
+                                <a className="text-white border-transparent border-8 hover:bg-slate-600 hover:rounded-lg hover:border-slate-600 hover:border-8" href="/pages/artwork">Artwork</a>
                             </li>
-                            {/*<li className="mr-6">
-                                <a className="text-gray-400 cursor-not-allowed" href="#">contact</a>
-                            </li>*/}
+                            <li className="mx-6">
+                                <a className="text-white border-transparent border-8 hover:bg-slate-600 hover:rounded-lg hover:border-slate-600 hover:border-8" href="#">contact</a>
+                            </li>
                         </ul>
                     </nav>
+                    <hr className='m-10 after:h-10'/>
                     {children}
                 </main>
             </body>
