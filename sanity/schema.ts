@@ -10,6 +10,11 @@ export const schema: { types: SchemaTypeDefinition[] } = {
 
       fields: [
         defineField({
+          name: 'title',
+          title: 'Title',
+          type: 'string'
+      }),
+        defineField({
           title: 'Content',
           name: 'content',
           type: 'image',
@@ -17,20 +22,15 @@ export const schema: { types: SchemaTypeDefinition[] } = {
             hotspot: true
           }
         }),
-          defineField({
-            name: 'title',
-            title: 'Title',
-            type: 'string'
-        }),
         defineField({
           name: 'caption',
           type: 'string',
           title: 'Caption',
         }),
          defineField({
-          name: 'attribution',
+          name: 'author',
           type: 'string',
-          title: 'Attribution',
+          title: 'Author',
         })
       ],
     }),

@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import ianJpeg from '@/public/ian.jpeg';
-import './globals.css';
+import '../globals.css';
 import { Inter } from 'next/font/google';
 
 const inter = Inter({ subsets: ['latin'] });
