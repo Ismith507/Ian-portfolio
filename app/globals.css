@@ -17,7 +17,7 @@
 }
 
 @layer base {
-	html,
+	html { scroll-behavior: smooth; }
 	body {
 		@apply min-h-screen;
 	}
