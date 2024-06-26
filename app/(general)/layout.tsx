@@ -1,78 +1,108 @@
 import '../globals.css';
+import Link from 'next/link';
+
+const NavLink = ({
+	href,
+	children,
+}: {
+	href: string;
+	children: React.ReactNode;
+}) => {
+	return (
+		<li className="group mx-6">
+			<Link className="py-1" href={href}>
+				<span className="transition ease-in-out duration-200 group-hover:-translate-y-1 group-hover:bg-gradient-to-b group-hover:from-white group-hover:to-orange-400 group-hover:inline-block group-hover:text-transparent group-hover:bg-clip-text">
+					{children}
+				</span>
+			</Link>
+		</li>
+	);
+};
 
 export default function RootLayout({
-    children,
+	children,
 }: {
-    children: React.ReactNode;
+	children: React.ReactNode;
 }) {
-    return (
-        <html lang="en">
-            <body className="background: bg-white ">
-                <main>
-                    <nav className="flex flex-row justify-center place-items-center text-xl background: bg-slate-600 sticky top-0 w-full z-30 h-16">
-                        <ul className="flex text-white">
-                            <li className="mx-6 hover:-translate-y-1 transition ease-in-out duration-200 hover:bg-gradient-to-b hover:from-white hover:to-orange-400 hover:inline-block hover:text-transparent hover:bg-clip-text">
-                                <a href="/">Home</a>
-                            </li>
-                            <li className="mx-6 hover:-translate-y-1 transition ease-in-out duration-200 hover:bg-gradient-to-b hover:from-white hover:to-orange-400 hover:inline-block hover:text-transparent hover:bg-clip-text">
-                                <a href="/pages/projects">My projects</a>
-                            </li>
-                            <li className="mx-6 hover:-translate-y-1 transition ease-in-out duration-200 hover:bg-gradient-to-b hover:from-white hover:to-orange-400 hover:inline-block hover:text-transparent hover:bg-clip-text">
-                                <a href="/pages/artwork">Artwork</a>
-                            </li>
-                            <li className="mx-6 hover:-translate-y-1 transition ease-in-out duration-200 hover:bg-gradient-to-b hover:from-white hover:to-orange-400 hover:inline-block hover:text-transparent hover:bg-clip-text">
-                                <a href="/pages/contact">contact</a>
-                            </li>
-                        </ul>
-                    </nav>
-                    {children}
-                    <footer className="flex flex-col justify-center bg-slate-600 text-white">
-                        <nav className="flex flex-row justify-center m-10 text-sm">
-                            <ul className="flex">
-                                <li className="mx-6">
-                                    <a className="border-transparent border-8 hover:bg-slate-600 hover:rounded-lg hover:border-slate-600 hover:border-8" href="#">Home</a>
-                                </li>
-                                <li className="mx-6">
-                                    <p>|</p>
-                                </li>
-                                <li className="mx-6">
-                                    <a className="border-transparent border-8 hover:bg-slate-600 hover:rounded-lg hover:border-slate-600 hover:border-8" href="/pages/projects">My projects</a>
-                                </li>
-                                <li className="mx-6">
-                                    <p>|</p>
-                                </li>
-                                <li className="mx-6">
-                                    <a className="border-transparent border-8 hover:bg-slate-600 hover:rounded-lg hover:border-slate-600 hover:border-8" href="/pages/artwork">Artwork</a>
-                                </li>
-                                <li className="mx-6">
-                                    <p>|</p>
-                                </li>
-                                <li className="mx-6">
-                                    <a className="border-transparent border-8 hover:bg-slate-600 hover:rounded-lg hover:border-slate-600 hover:border-8" href="#">contact</a>
-                                </li>
-                            </ul>
-                        </nav>
-                        <ul className="flex flex-row justify-center space-x-4 mb-12">
-                            <li>
-                                <p>331-575-7529</p>
-                            </li>
-                            <li>
-                                <p>|</p>
-                            </li>
-                            <li>
-                                <p>ixsmithx1999@gmail.com</p>
-                            </li>
-                            <li>
-                                <p>|</p>
-                            </li>
-                            <li>
-                                <a href='https://github.com/Ismith507'>github.com/Ismith507</a>
-                            </li>
-                        </ul>
-                        
-                    </footer>
-                </main>
-            </body>
-        </html>
-    )
+	return (
+		<html lang="en">
+			<body>
+				<main>
+					<nav className="flex flex-row justify-center place-items-center text-xl background: bg-slate-600 sticky top-0 w-full z-30 h-16">
+						<ul className="flex text-white">
+							<NavLink href="/">Home</NavLink>
+							<NavLink href="/pages/projects">My projects</NavLink>
+							<NavLink href="/pages/artwork">Artwork</NavLink>
+							<NavLink href="/pages/contact">contact</NavLink>
+						</ul>
+					</nav>
+					{children}
+					<footer className="flex flex-col justify-center bg-slate-600 text-white">
+						<nav className="flex flex-row justify-center m-10 text-sm">
+							<ul className="flex">
+								<li className="mx-6">
+									<a
+										className="border-transparent border-8 hover:bg-slate-600 hover:rounded-lg hover:border-slate-600 hover:border-8"
+										href="#"
+									>
+										Home
+									</a>
+								</li>
+								<li className="mx-6">
+									<p>|</p>
+								</li>
+								<li className="mx-6">
+									<a
+										className="border-transparent border-8 hover:bg-slate-600 hover:rounded-lg hover:border-slate-600 hover:border-8"
+										href="/pages/projects"
+									>
+										My projects
+									</a>
+								</li>
+								<li className="mx-6">
+									<p>|</p>
+								</li>
+								<li className="mx-6">
+									<a
+										className="border-transparent border-8 hover:bg-slate-600 hover:rounded-lg hover:border-slate-600 hover:border-8"
+										href="/pages/artwork"
+									>
+										Artwork
+									</a>
+								</li>
+								<li className="mx-6">
+									<p>|</p>
+								</li>
+								<li className="mx-6">
+									<a
+										className="border-transparent border-8 hover:bg-slate-600 hover:rounded-lg hover:border-slate-600 hover:border-8"
+										href="#"
+									>
+										contact
+									</a>
+								</li>
+							</ul>
+						</nav>
+						<ul className="flex flex-row justify-center space-x-4 mb-12">
+							<li>
+								<p>331-575-7529</p>
+							</li>
+							<li>
+								<p>|</p>
+							</li>
+							<li>
+								<p>ixsmithx1999@gmail.com</p>
+							</li>
+							<li>
+								<p>|</p>
+							</li>
+							<li>
+								<a href="https://github.com/Ismith507">github.com/Ismith507</a>
+							</li>
+						</ul>
+					</footer>
+				</main>
+			</body>
+		</html>
+	);
 }
