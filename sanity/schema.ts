@@ -71,7 +71,7 @@ export const schema: { types: SchemaTypeDefinition[] } = {
           type: 'slug'
         })
       ]
-    })
-
-  ],
+    }),
+  ]
 }
+
