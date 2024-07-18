@@ -1,5 +1,6 @@
 import '../globals.css';
 import Link from 'next/link';
+import { Audio } from 'react-loading-icons'
 
 const NavLink = ({
 	href,
@@ -31,9 +32,9 @@ export default function RootLayout({
 					<nav className="flex flex-row justify-center place-items-center text-xl background: bg-slate-600 sticky top-0 w-full z-30 h-16">
 						<ul className="flex text-white">
 							<NavLink href="/">Home</NavLink>
-							<NavLink href="/pages/projects">My projects</NavLink>
-							<NavLink href="/pages/artwork">Artwork</NavLink>
-							<NavLink href="/pages/contact">contact</NavLink>
+							<NavLink href="/projects">My projects</NavLink>
+							<NavLink href="/artwork">Artwork</NavLink>
+							<NavLink href="/contact">Contact</NavLink>
 						</ul>
 					</nav>
 					{children}
@@ -41,63 +42,51 @@ export default function RootLayout({
 						<nav className="flex flex-row justify-center m-10 text-sm">
 							<ul className="flex">
 								<li className="mx-6">
-									<a
+									<Link
 										className="border-transparent border-8 hover:bg-slate-600 hover:rounded-lg hover:border-slate-600 hover:border-8"
-										href="#"
+										href="/"
 									>
 										Home
-									</a>
+									</Link>
 								</li>
 								<li className="mx-6">
 									<p>|</p>
 								</li>
 								<li className="mx-6">
-									<a
+									<Link
 										className="border-transparent border-8 hover:bg-slate-600 hover:rounded-lg hover:border-slate-600 hover:border-8"
-										href="/pages/projects"
+										href="/projects"
 									>
-										My projects
-									</a>
+										My Projects
+									</Link>
 								</li>
 								<li className="mx-6">
 									<p>|</p>
 								</li>
 								<li className="mx-6">
-									<a
+									<Link
 										className="border-transparent border-8 hover:bg-slate-600 hover:rounded-lg hover:border-slate-600 hover:border-8"
-										href="/pages/artwork"
+										href="/artwork"
 									>
 										Artwork
-									</a>
+									</Link>
 								</li>
 								<li className="mx-6">
 									<p>|</p>
 								</li>
 								<li className="mx-6">
-									<a
+									<Link
 										className="border-transparent border-8 hover:bg-slate-600 hover:rounded-lg hover:border-slate-600 hover:border-8"
-										href="#"
+										href="/contact"
 									>
-										contact
-									</a>
+										Contact
+									</Link>
 								</li>
 							</ul>
 						</nav>
 						<ul className="flex flex-row justify-center space-x-4 mb-12">
 							<li>
-								<p>331-575-7529</p>
-							</li>
-							<li>
-								<p>|</p>
-							</li>
-							<li>
-								<p>ixsmithx1999@gmail.com</p>
-							</li>
-							<li>
-								<p>|</p>
-							</li>
-							<li>
-								<a href="https://github.com/Ismith507">github.com/Ismith507</a>
+								<Link href="https://github.com/Ismith507">github.com/Ismith507</Link>
 							</li>
 						</ul>
 					</footer>
