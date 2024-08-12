@@ -12,7 +12,7 @@ const NavLink = ({
 	return (
 		<li className="group mx-6">
 			<Link className="py-1" href={href}>
-				<span className="transition ease-in-out duration-200 group-hover:-translate-y-1 group-hover:bg-gradient-to-b group-hover:from-white group-hover:to-orange-400 group-hover:inline-block group-hover:text-transparent group-hover:bg-clip-text">
+				<span className="transition duration-200 ease-in-out group-hover:-translate-y-2 group-hover:inline-block">
 					{children}
 				</span>
 			</Link>
@@ -38,7 +38,7 @@ export default function RootLayout({
 						</ul>
 					</nav>
 					{children}
-					<footer className="flex flex-col justify-center bg-slate-600 text-white">
+					<footer className="flex flex-col justify-center bg-slate-600 text-white absolute bottom-0 left-0 w-screen">
 						<nav className="flex flex-row justify-center m-10 text-sm">
 							<ul className="flex">
 								<li className="mx-6">
