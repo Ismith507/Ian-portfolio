@@ -1,6 +1,5 @@
 import '../globals.css';
 import Link from 'next/link';
-import { Audio } from 'react-loading-icons'
 
 const NavLink = ({
 	href,
@@ -33,7 +32,6 @@ export default function RootLayout({
 						<ul className="flex text-white">
 							<NavLink href="/">Home</NavLink>
 							<NavLink href="/projects">My projects</NavLink>
-							<NavLink href="/artwork">Artwork</NavLink>
 							<NavLink href="/contact">Contact</NavLink>
 						</ul>
 					</nav>
@@ -58,17 +56,6 @@ export default function RootLayout({
 										href="/projects"
 									>
 										My Projects
-									</Link>
-								</li>
-								<li className="mx-6">
-									<p>|</p>
-								</li>
-								<li className="mx-6">
-									<Link
-										className="border-transparent border-8 hover:bg-slate-600 hover:rounded-lg hover:border-slate-600 hover:border-8"
-										href="/artwork"
-									>
-										Artwork
 									</Link>
 								</li>
 								<li className="mx-6">
