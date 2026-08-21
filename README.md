@@ -1,43 +1,71 @@
 # Ian's Portfolio
 
-This is a [Next.js](https://nextjs.org/) project. Next is a [React](https://react.dev/) framework that allows for server-side rendering, API routes and more.
+A personal portfolio website showcasing projects and work. Built with modern web technologies for fast performance and a great user experience.
 
-It uses [Tailwind CSS](https://tailwindcss.com/) for styling and [TypeScript](https://www.typescriptlang.org/), a superset of JavaScript, for type safety.
+## Tech Stack
+
+- **Next.js 14** — a React framework that handles routing, server-side rendering, and deployment
+- **React 18** — the JavaScript library for building interactive user interfaces
+- **TypeScript** — a superset of JavaScript that adds type safety, catching errors before runtime
+- **Tailwind CSS 3** — a utility-first CSS framework for styling
 
 ## Prerequisites
 
-You'll need these globally installed on your machine:
+You'll need these installed on your machine:
 
-[Node 18](https://nodejs.org/en/download/) (javascript runtime)
-
-[PNPM](https://pnpm.io/installation) (package manager)
+- **Node.js 18 or newer** — the JavaScript runtime that runs your local development server and build tools
+- **npm** — Node's package manager for installing dependencies (comes bundled with Node.js)
 
 ## Getting Started
 
-First, install the dependencies:
+Install dependencies:
 
 ```bash
-pnpm install
+npm install
 ```
 
-Then, run the development server:
+Start the development server:
 
 ```bash
-pnpm dev
+npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser to view the site.
 
-You can start editing the page by modifying `app/(home)/page.tsx`. The page auto-updates as you edit the file.
+The development server auto-reloads when you edit files.
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+### Other Commands
 
-## Learn More
+```bash
+npm run build    # Create an optimized production build
+npm start        # Run the production build locally
+npm run lint     # Check code for style and potential errors
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+## Project Structure
 
-## Deploy on Vercel
+All pages live in the `app/(general)/` folder (the parentheses group related routes without changing their URLs):
 
-The easiest way to deploy this is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js) from the creators of Next.js.
+- **`app/(general)/page.tsx`** — the home page with a biography
+- **`app/(general)/layout.tsx`** — shared layout with top navigation and footer used on all pages
+- **`app/(general)/contact/page.tsx`** — a contact form (currently front-end only)
+- **`app/(general)/projects/page.tsx`** — a gallery of projects, built from `components/link-card.tsx` cards, including a link to the interactive fractal explorer and an external C++ chess engine repo
+- **`app/(general)/projects/fractals/page.tsx`** — an interactive Mandelbrot fractal explorer (the Mandelbrot set is a famous mathematical fractal drawn by repeating a simple formula)
 
-Check out the [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+### Fractal Explorer
+
+The fractal page renders `components/fractal-canvas.tsx`, a client-side component that draws onto an HTML canvas and supports these keyboard controls:
+
+- **Arrow keys** — pan around the fractal
+- **Spacebar** — zoom in
+- **Shift** — zoom out
+- **Reset button** — return to the starting view
+
+The fractal rendering uses two supporting files:
+
+- `lib/mandelbrot/original-ported.ts` — the `drawPorted` function the canvas actually uses to draw the fractal
+- `lib/mandelbrot-set.ts` — a `MandelbrotSet` class implementation of the same idea
+
+## Deployment
+
+This is a standard Next.js application. The easiest deployment is [Vercel](https://vercel.com), the platform built by the Next.js creators. Connect your GitHub repository to Vercel for automatic deployments on every push to your main branch.

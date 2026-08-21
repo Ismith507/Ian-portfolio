@@ -1,0 +1,79 @@
+[
+  {
+    "id": "placeholder-study-01",
+    "title": "Placeholder study 01",
+    "imageUrl": "/art-fixtures/fixture-01.svg",
+    "altText": "Placeholder artwork 01 — a numbered gray portrait panel used until the real gallery database is connected.",
+    "width": 600,
+    "height": 800,
+    "sortOrder": 1,
+    "featured": true
+  },
+  {
+    "id": "placeholder-study-02",
+    "title": "Placeholder study 02",
+    "imageUrl": "/art-fixtures/fixture-02.svg",
+    "altText": "Placeholder artwork 02 — a numbered gray square panel used until the real gallery database is connected.",
+    "description": "Placeholder description — exercises the optional caption line on the hover overlay and in the lightbox.",
+    "width": 800,
+    "height": 800,
+    "sortOrder": 2
+  },
+  {
+    "id": "placeholder-study-03",
+    "title": "Placeholder study 03",
+    "imageUrl": "/art-fixtures/fixture-03.svg",
+    "altText": "Placeholder artwork 03 — a numbered gray landscape panel used until the real gallery database is connected.",
+    "width": 900,
+    "height": 506,
+    "sortOrder": 3,
+    "featured": true
+  },
+  {
+    "id": "placeholder-study-04",
+    "title": "Placeholder study 04",
+    "imageUrl": "/art-fixtures/fixture-04.svg",
+    "altText": "Placeholder artwork 04 — a numbered gray tall-portrait panel used until the real gallery database is connected.",
+    "width": 600,
+    "height": 900,
+    "sortOrder": 4
+  },
+  {
+    "id": "placeholder-study-05",
+    "title": "Placeholder study 05",
+    "imageUrl": "/art-fixtures/fixture-05.svg",
+    "altText": "Placeholder artwork 05 — a numbered gray upright panel used until the real gallery database is connected.",
+    "description": "Placeholder description — a second piece carrying optional text so the masonry column mixes captioned and bare works.",
+    "width": 720,
+    "height": 900,
+    "sortOrder": 5
+  },
+  {
+    "id": "placeholder-study-06",
+    "title": "Placeholder study 06",
+    "imageUrl": "/art-fixtures/fixture-06.svg",
+    "altText": "Placeholder artwork 06 — a numbered gray wide-landscape panel used until the real gallery database is connected.",
+    "width": 900,
+    "height": 600,
+    "sortOrder": 6
+  },
+  {
+    "id": "placeholder-study-07",
+    "title": "Placeholder study 07",
+    "imageUrl": "/art-fixtures/fixture-07.svg",
+    "altText": "Placeholder artwork 07 — a numbered gray narrow-portrait panel used until the real gallery database is connected.",
+    "description": "Placeholder description — the tallest, narrowest panel, included to stress the masonry column heights.",
+    "width": 506,
+    "height": 900,
+    "sortOrder": 7
+  },
+  {
+    "id": "placeholder-study-08",
+    "title": "Placeholder study 08",
+    "imageUrl": "/art-fixtures/fixture-08.svg",
+    "altText": "Placeholder artwork 08 — a numbered gray tall panel used until the real gallery database is connected.",
+    "width": 800,
+    "height": 1000,
+    "sortOrder": 8
+  }
+]

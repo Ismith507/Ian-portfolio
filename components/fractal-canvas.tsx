@@ -39,8 +39,14 @@ export const FractalCanvasControlled = (props: FractalCanvasProps) => {
 		draw();
 	}, [draw]);
 
-	return <canvas ref={ref} className="bg-slate-400/50 aspect-square w-full" />;
+	return <canvas ref={ref} className="bg-bg aspect-square w-full" />;
 };
+
+const Kbd = ({ children }: { children: React.ReactNode }) => (
+	<kbd className="inline-flex min-w-[1.75rem] items-center justify-center border bg-surface px-2 py-0.5 font-mono text-xs text-text">
+		{children}
+	</kbd>
+);
 
 export const FractalCanvas = () => {
 	const [minReal, setMinReal] = useState(-2);
@@ -87,44 +93,75 @@ export const FractalCanvas = () => {
 	useHotkeys('space', zoomIn);
 	useHotkeys('shift', zoomOut);
 
+	const readout: [string, number][] = [
+		['minReal', minReal],
+		['maxReal', maxReal],
+		['minImaginary', minImaginary],
+		['size', size],
+	];
+
 	return (
-		<div className="grid grid-cols-12">
-			<div className="col-span-12 md:col-span-6">
-				<FractalCanvasControlled
-					minReal={minReal}
-					maxReal={maxReal}
-					minImaginary={minImaginary}
-					size={size}
-				/>
-			</div>
-			<div className="p-4 w-full flex flex-col gap-4 col-span-12 md:col-span-6">
-				<div className="w-full">
-					<p>
-						Pan with arrow keys, zoom in with spacebar, zoom out with shift.
-					</p>
+		<div className="grid grid-cols-12 gap-6">
+			<div className="col-span-12 md:col-span-7">
+				<div className="border bg-surface p-3">
+					<FractalCanvasControlled
+						minReal={minReal}
+						maxReal={maxReal}
+						minImaginary={minImaginary}
+						size={size}
+					/>
 				</div>
-				<table className="col-span-12">
+				<p className="mt-3 font-mono text-xs text-text-muted md:hidden">
+					Keyboard required — best explored on desktop.
+				</p>
+			</div>
+
+			<div className="col-span-12 flex flex-col gap-8 md:col-span-5">
+				<div className="flex flex-col gap-3">
+					<p className="font-mono text-xs uppercase tracking-widest text-text-muted">
+						Controls
+					</p>
+					<div className="flex items-center gap-3">
+						<span className="w-20 font-mono text-xs uppercase tracking-widest text-text-muted">
+							Pan
+						</span>
+						<div className="flex flex-wrap gap-1.5">
+							<Kbd>↑</Kbd>
+							<Kbd>↓</Kbd>
+							<Kbd>←</Kbd>
+							<Kbd>→</Kbd>
+						</div>
+					</div>
+					<div className="flex items-center gap-3">
+						<span className="w-20 font-mono text-xs uppercase tracking-widest text-text-muted">
+							Zoom in
+						</span>
+						<Kbd>SPACE</Kbd>
+					</div>
+					<div className="flex items-center gap-3">
+						<span className="w-20 font-mono text-xs uppercase tracking-widest text-text-muted">
+							Zoom out
+						</span>
+						<Kbd>SHIFT</Kbd>
+					</div>
+				</div>
+
+				<table className="w-full border-collapse font-mono text-sm">
 					<tbody>
-						<tr>
-							<td>minReal</td>
-							<td className="pl-8">{minReal}</td>
-						</tr>
-						<tr>
-							<td>maxReal</td>
-							<td className="pl-8">{maxReal}</td>
-						</tr>
-						<tr>
-							<td>minImaginary</td>
-							<td className="pl-8">{minImaginary}</td>
-						</tr>
-						<tr>
-							<td>size</td>
-							<td className="pl-8">{size}</td>
-						</tr>
+						{readout.map(([key, value]) => (
+							<tr key={key} className="border-b">
+								<td className="py-1.5 pr-4 text-text-muted">{key}</td>
+								<td className="break-all py-1.5 text-right text-text">
+									{value}
+								</td>
+							</tr>
+						))}
 					</tbody>
 				</table>
+
 				<button
-					className="text-red-600"
+					type="button"
+					className="self-start border border-accent px-4 py-2 font-mono text-sm text-accent transition-colors duration-200 hover:bg-accent-fill hover:text-white"
 					onClick={() => {
 						setMinReal(-2);
 						setMaxReal(1);

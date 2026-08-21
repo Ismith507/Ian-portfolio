@@ -2,27 +2,70 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Matte palette: warm paper/charcoal neutrals (no pure white, no blue-black),
+   dusty brick red instead of neon. All pairings WCAG AA verified:
+   text/muted/accent ≥ 4.5:1 on bg AND surface(-2); white on accent-fill ≥ 4.5. */
 :root {
-	--foreground-rgb: 0, 0, 0;
-	--background-start-rgb: 214, 219, 220;
-	--background-end-rgb: 255, 255, 255;
+  --color-bg: 245 244 240;          /* #F5F4F0 warm paper */
+  --color-surface: 251 250 247;     /* #FBFAF7 near-white, not white */
+  --color-surface-2: 236 234 228;   /* #ECEAE4 */
+  --color-border: 216 213 204;      /* #D8D5CC */
+  --color-text: 29 28 25;           /* #1D1C19 warm near-black */
+  --color-text-muted: 93 90 82;     /* #5D5A52 warm gray */
+  --color-accent: 169 59 56;        /* #A93B38 dusty brick */
+  --color-accent-fill: 169 59 56;   /* #A93B38 */
 }
-
-@media (prefers-color-scheme: dark) {
-	:root {
-		--foreground-rgb: 255, 255, 255;
-		--background-start-rgb: 0, 0, 0;
-		--background-end-rgb: 0, 0, 0;
-	}
+.dark {
+  --color-bg: 18 18 16;             /* #121210 warm charcoal */
+  --color-surface: 26 26 23;        /* #1A1A17 */
+  --color-surface-2: 35 35 32;      /* #232320 */
+  --color-border: 52 52 47;         /* #34342F */
+  --color-text: 231 229 224;        /* #E7E5E0 warm off-white */
+  --color-text-muted: 155 150 140;  /* #9B968C warm gray */
+  --color-accent: 221 99 90;        /* #DD635A dusty terracotta-red */
+  --color-accent-fill: 168 56 50;   /* #A83832 */
 }
 
 @layer base {
-	html { scroll-behavior: smooth; }
-	body {
-		@apply min-h-screen;
-	}
+  /* Smooth anchor scrolling is a non-essential animation: disabled when the OS
+     reduce-motion setting is on (navigation still works, it just jumps instantly). */
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+  }
+  body { @apply min-h-screen bg-bg text-text font-sans antialiased; }
+  /* Site-wide matte grain: a tiling desaturated SVG-noise overlay sitting
+     above the fractal backdrop (z -10) and below all content — the "rough
+     texture alongside clean lines" from REFERENCES.md. Static, zero-JS. */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -5;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity: 0.05;
+  }
+  .dark body::after { opacity: 0.07; }
+  ::selection { @apply bg-accent-fill text-white; }
+  :focus-visible { outline: 2px solid rgb(var(--color-accent)); outline-offset: 2px; }
 }
 
-body {
-	color: rgb(var(--foreground-rgb));
+/* SectionReveal (see component spec) — hidden state only when JS is running.
+   Two shapes: `[data-reveal]` hides a whole element; `[data-reveal-stagger] > *`
+   hides the DIRECT children of a stagger container. Both attributes are rendered
+   on the server, so hidden-from-first-paint holds for staggered grids too (no
+   flash of content that then vanishes and re-animates). Children inherit the
+   --reveal-* custom properties from the container; SectionReveal stamps each
+   child's own --reveal-delay on mount, before any reveal can fire. */
+@media (prefers-reduced-motion: no-preference) {
+  html.js [data-reveal],
+  html.js [data-reveal-stagger] > * {
+    opacity: 0;
+    transform: translateY(var(--reveal-translate, 16px));
+    transition: opacity var(--reveal-duration, 400ms) ease-out,
+                transform var(--reveal-duration, 400ms) ease-out;
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+  html.js [data-reveal].is-revealed,
+  html.js [data-reveal-stagger] > .is-revealed { opacity: 1; transform: none; }
 }
