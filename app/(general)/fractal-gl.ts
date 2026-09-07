@@ -1,38 +1,26 @@
 // WebGL backend for the site-wide fractal backdrop: a fragment shader that
-// computes the escape-time loop with df64 ("double-float") emulated precision
+// uses native floats for wide views and df64 ("double-float") emulated precision
 // — each coordinate is a pair of float32s (hi, lo), extending usable zoom
 // depth from float32's ~1e5 to ~1e13 (Thasler/DSFUN90 technique, same lineage
 // deck.gl ships in production). Every pixel is recomputed per draw at full
-// resolution; when the camera is idle nothing renders at all.
+// resolution; palette conversion and layout reads are cached between draws.
 //
 // Compiler-folding hazard: df64 depends on error-compensation arithmetic like
 // `a - (a - b)` that optimizing shader compilers may algebraically simplify
 // away. The standard production mitigation (luma.gl's ONE-uniform trick) is
 // used here: critical terms multiply by a uniform that is always 1.0, which
-// the compiler cannot constant-fold. Correctness is also probed at startup —
-// if the driver still miscompiles or WebGL is unavailable, the factory
-// returns null and the caller falls back to the CPU renderer.
+// the compiler cannot constant-fold. Shader compilation is probed at startup;
+// if compilation fails or WebGL is unavailable, the factory returns null and
+// the caller falls back to the CPU renderer.
 
+import { createPalette, paletteKey, PALETTE_SIZE } from './fractal-palette';
 import {
-	ACCENT_ALPHA,
-	ALPHA_BASE,
-	ALPHA_RAMP,
-	DE_GLOW_ALPHA,
-	DE_GLOW_EXP,
-	DE_GLOW_PX,
-	DE_LINE_ALPHA,
-	DE_LINE_PX,
+	DETAIL_FREQUENCY,
+	DETAIL_STRENGTH,
 	ESCAPE_R2,
-	FAR_FADE_END,
-	FAR_FIELD_KEEP,
-	FILIGREE_MIN_ITER,
+	FLOAT_PIXEL_THRESHOLD,
+	GRADIENT_REACH_PX,
 	MAX_ITER_CAP,
-	RED_DEEP,
-	RED_DEEP_FACTOR,
-	RED_FULL,
-	RED_HOT,
-	RED_HOT_MIX,
-	RED_START,
 	maxIterAt,
 	type FractalBackend,
 	type FractalColors,
@@ -53,12 +41,14 @@ const FRAG = `
 precision highp float;
 
 uniform vec2 u_res;
+uniform float u_cssWidth;
 uniform float u_scale;
 uniform vec2 u_cx; // view center real part as df64 (hi, lo)
 uniform vec2 u_cy; // view center imaginary part as df64 (hi, lo)
 uniform int u_maxIter;
-uniform vec3 u_muted;
-uniform vec3 u_accent;
+uniform sampler2D u_palette;
+uniform bool u_precise;
+uniform bool u_motion;
 uniform float u_one; // always 1.0 — blocks constant-folding of df64 math
 
 vec2 ds(float a) {
@@ -96,11 +86,12 @@ vec2 ds_mul(vec2 a, vec2 b) {
 // GLSL ES 1.00 requires a constant loop bound; break early on u_maxIter.
 const int MAX_LOOP = ${MAX_ITER_CAP};
 
-void main() {
+vec4 sampleFractal(vec2 pixel, out float distancePx) {
+	distancePx = 0.0;
 	// Pixel fraction with y measured from the TOP (im grows downward on
 	// screen, matching the CPU renderer). u_scale is the complex-plane WIDTH;
 	// the vertical span follows the pixel aspect so nothing distorts.
-	vec2 frac = vec2(gl_FragCoord.x / u_res.x, 1.0 - gl_FragCoord.y / u_res.y);
+	vec2 frac = vec2(pixel.x / u_res.x, 1.0 - pixel.y / u_res.y);
 	float aspect = u_res.y / u_res.x;
 	// Per-pixel offsets are tiny (≤ scale/2), so plain float32 is exact enough
 	// for them; only the absolute coordinates need df64.
@@ -116,8 +107,11 @@ void main() {
 	float q = xq * xq + ySq;
 	float xp1 = x + 1.0;
 	if (q * (q + xq) <= 0.25 * ySq || xp1 * xp1 + ySq <= 0.0625) {
-		gl_FragColor = vec4(0.0);
-		return;
+		// Deep inside a closed-form bulb, no extra boundary samples are needed.
+		float margin = 4.0 * u_scale / u_res.x;
+		if (q * (q + xq) < 0.25 * ySq - margin ||
+			xp1 * xp1 + ySq < 0.0625 - margin) distancePx = -1.0;
+		return vec4(0.0);
 	}
 
 	vec2 zr = ds(0.0);
@@ -128,75 +122,95 @@ void main() {
 	float dzr = 0.0;
 	float dzi = 0.0;
 	int n = u_maxIter;
-	for (int i = 0; i < MAX_LOOP; i++) {
-		if (i >= u_maxIter) break;
-		// Derivative first, using the CURRENT z (hi parts are plenty).
-		float ndzr = 2.0 * (zr.x * dzr - zi.x * dzi) + 1.0;
-		float ndzi = 2.0 * (zr.x * dzi + zi.x * dzr);
-		dzr = ndzr;
-		dzi = ndzi;
-		// z = z^2 + c in df64 complex arithmetic.
-		vec2 zr2 = ds_mul(zr, zr);
-		vec2 zi2 = ds_mul(zi, zi);
-		vec2 zri = ds_mul(zr, zi);
-		vec2 nr = ds_add(ds_add(zr2, vec2(-zi2.x, -zi2.y)), cx);
-		vec2 ni = ds_add(ds_add(zri, zri), cy);
-		zr = nr;
-		zi = ni;
-		if (zr.x * zr.x + zi.x * zi.x > ${f(ESCAPE_R2)}) {
-			n = i + 1;
-			break;
+	if (u_precise) {
+		for (int i = 0; i < MAX_LOOP; i++) {
+			if (i >= u_maxIter) break;
+			// Derivative first, using the CURRENT z (hi parts are plenty).
+			float ndzr = 2.0 * (zr.x * dzr - zi.x * dzi) + 1.0;
+			float ndzi = 2.0 * (zr.x * dzi + zi.x * dzr);
+			dzr = ndzr;
+			dzi = ndzi;
+			// z = z^2 + c in df64 complex arithmetic.
+			vec2 zr2 = ds_mul(zr, zr);
+			vec2 zi2 = ds_mul(zi, zi);
+			vec2 zri = ds_mul(zr, zi);
+			vec2 nr = ds_add(ds_add(zr2, vec2(-zi2.x, -zi2.y)), cx);
+			vec2 ni = ds_add(ds_add(zri, zri), cy);
+			zr = nr;
+			zi = ni;
+			if (zr.x * zr.x + zi.x * zi.x > ${f(ESCAPE_R2)}) {
+				n = i + 1;
+				break;
+			}
 		}
+
+	} else {
+		// Native float orbit for wide views. The precision switch is uniform
+		// across the draw; fine close-ups still execute the df64 path above.
+		float re = 0.0;
+		float im = 0.0;
+		for (int i = 0; i < MAX_LOOP; i++) {
+			if (i >= u_maxIter) break;
+			float ndzr = 2.0 * (re * dzr - im * dzi) + 1.0;
+			dzi = 2.0 * (re * dzi + im * dzr);
+			dzr = ndzr;
+			float nr = re * re - im * im + x;
+			im = 2.0 * re * im + y;
+			re = nr;
+			if (re * re + im * im > ${f(ESCAPE_R2)}) {
+				n = i + 1;
+				break;
+			}
+		}
+		zr = ds(re);
+		zi = ds(im);
 	}
 
-	float fn = float(n);
-	float mi = float(u_maxIter);
-	// Interior and far-field stay transparent — boundary filigree only.
-	if (n >= u_maxIter || fn < ${f(FILIGREE_MIN_ITER)}) {
-		gl_FragColor = vec4(0.0);
-		return;
-	}
-	// SMOOTH iteration count: the renormalized fractional escape count makes
-	// the coloring continuous between neighboring pixels — this is what kills
-	// banding aliasing ("static") when bands compress below pixel size.
+	if (n >= u_maxIter) return vec4(0.0);
 	float zm2 = zr.x * zr.x + zi.x * zi.x;
-	fn = fn + 1.0 - log2(0.5 * log2(zm2));
 
 	// DISTANCE ESTIMATE (Milnor / iq): d = |z|·ln|z| / |z'|, expressed as
 	// 0.5·sqrt(|z|²/|z'|²)·ln(|z|²). Dividing by the view scale converts to a
-	// screen fraction, so the boundary renders at CONSTANT PIXEL WIDTH at any
-	// zoom depth; the smoothstep over the pixel footprint is the analytic AA.
+	// screen distance for the contour and exterior gradient at any zoom depth.
 	float dzm2 = max(dzr * dzr + dzi * dzi, 1e-30);
 	float dist = 0.5 * sqrt(zm2 / dzm2) * log(zm2);
-	float dPx = dist / u_scale * u_res.x;
-	float line = 1.0 - smoothstep(0.0, ${f(DE_LINE_PX)}, dPx);
-	float glow = pow(max(0.0, 1.0 - dPx / ${f(DE_GLOW_PX)}), ${f(DE_GLOW_EXP)});
-	float deA = max(line * ${f(DE_LINE_ALPHA)}, glow * ${f(DE_GLOW_ALPHA)});
-
-	// Four-stop hue ramp toward the boundary — all shades of the one accent
-	// hue: muted gray -> deep dark red -> full accent red -> hot brightened
-	// red. Mixed in LINEAR light (u_muted/u_accent arrive linearized).
-	float t = clamp(fn / mi, 0.0, 1.0);
-	float w1 = smoothstep(${f(RED_START)}, ${f(RED_DEEP)}, t);
-	float w2 = smoothstep(${f(RED_DEEP)}, ${f(RED_FULL)}, t);
-	float w3 = smoothstep(${f(RED_FULL)}, ${f(RED_HOT)}, t);
-	vec3 deep = u_accent * ${f(RED_DEEP_FACTOR)};
-	vec3 hot = mix(u_accent, vec3(1.0), ${f(RED_HOT_MIX)});
-	vec3 rgb = mix(u_muted, deep, w1);
-	rgb = mix(rgb, u_accent, w2);
-	rgb = mix(rgb, hot, w3);
-
-	// Alpha: DE line-work is the definition layer; the old iteration-field
-	// alpha survives underneath, subdued, as texture (still fading in from
-	// zero over the far field — no hard edges anywhere).
-	float aGray = ${f(ALPHA_BASE)} + ${f(ALPHA_RAMP)} * t * t;
-	float farA = mix(aGray, ${f(ACCENT_ALPHA)}, w1) *
-		smoothstep(0.0, ${f(FAR_FADE_END)}, t) * ${f(FAR_FIELD_KEEP)};
-	float a = max(deA, farA);
-	// Encode back to sRGB for the compositor, then premultiply.
-	vec3 outRgb = pow(max(rgb, 0.0), vec3(1.0 / 2.2));
-	gl_FragColor = vec4(outRgb * a, a);
+	distancePx = dist / u_scale * u_res.x;
+	float dCss = dist / u_scale * u_cssWidth;
+	float t = exp(-sqrt(dCss / ${f(GRADIENT_REACH_PX)}));
+	vec4 color = texture2D(u_palette,
+		vec2((0.5 + t * ${f(PALETTE_SIZE - 1)}) / ${f(PALETTE_SIZE)}, 0.5));
+	// Smooth escape-time contours restore orbit detail inside the halo.
+	// Their phase is independent of the changing iteration budget.
+	float nu = float(n) + 1.0 - log2(0.5 * log(zm2));
+	float detail = 1.0 - ${f(DETAIL_STRENGTH)} * smoothstep(0.65, 0.98, t) *
+		(0.5 + 0.5 * cos(nu * ${f(DETAIL_FREQUENCY)}));
+	return vec4(color.rgb * color.a * detail, color.a);
 }
+
+void main() {
+	float distancePx;
+	vec4 color = sampleFractal(gl_FragCoord.xy + vec2(-0.25, -0.25), distancePx);
+	// Two subpixel samples during flight, four on arrival/ambient motion,
+	// only near the boundary (including unresolved interior pixels). MSAA on the fullscreen triangle cannot smooth the
+	// fractal itself; its geometry is created inside this fragment shader.
+	if (distancePx >= 0.0 && distancePx < 2.0) {
+		float unused;
+		color += sampleFractal(gl_FragCoord.xy + vec2(0.25, 0.25), unused);
+		if (u_motion) {
+			color *= 0.5;
+		} else {
+			color = 0.25 * (color +
+				sampleFractal(gl_FragCoord.xy + vec2( 0.25, -0.25), unused) +
+				sampleFractal(gl_FragCoord.xy + vec2(-0.25,  0.25), unused));
+		}
+	}
+	// Sub-byte, screen-stable dithering prevents visible 8-bit gradient steps
+	// without animated noise. Keep the premultiplied output in [0, alpha].
+	float dither = (fract(52.9829189 * fract(dot(gl_FragCoord.xy,
+		vec2(0.06711056, 0.00583715)))) - 0.5) / 255.0;
+	gl_FragColor = vec4(clamp(color.rgb + dither, 0.0, color.a), color.a);
+}
+
 `;
 
 const CONTEXT_ATTRS: WebGLContextAttributes = {
@@ -213,10 +227,6 @@ const split = (v: number): [number, number] => {
 	const hi = Math.fround(v);
 	return [hi, v - hi];
 };
-
-// sRGB byte -> linear-light float. The shader mixes colors in linear space
-// (gamma-space mixing systematically darkens and muddies) and re-encodes.
-const toLinear = (byte: number): number => Math.pow(byte / 255, 2.2);
 
 function buildProgram(gl: WebGLRenderingContext): WebGLProgram | null {
 	const compile = (type: number, src: string): WebGLShader | null => {
@@ -289,36 +299,45 @@ export function createGlBackend(canvas: HTMLCanvasElement): FractalBackend | nul
 
 	const loc = {
 		res: gl.getUniformLocation(program, 'u_res'),
+		cssWidth: gl.getUniformLocation(program, 'u_cssWidth'),
 		scale: gl.getUniformLocation(program, 'u_scale'),
 		cx: gl.getUniformLocation(program, 'u_cx'),
 		cy: gl.getUniformLocation(program, 'u_cy'),
 		maxIter: gl.getUniformLocation(program, 'u_maxIter'),
-		muted: gl.getUniformLocation(program, 'u_muted'),
-		accent: gl.getUniformLocation(program, 'u_accent'),
+		palette: gl.getUniformLocation(program, 'u_palette'),
+		precise: gl.getUniformLocation(program, 'u_precise'),
+		motion: gl.getUniformLocation(program, 'u_motion'),
 		one: gl.getUniformLocation(program, 'u_one'),
 	};
 	gl.uniform1f(loc.one, 1.0);
+	const palette = gl.createTexture();
+	gl.activeTexture(gl.TEXTURE0);
+	gl.bindTexture(gl.TEXTURE_2D, palette);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+	gl.uniform1i(loc.palette, 0);
+	let lastPalette = '';
+	let cssWidth = 1;
 
-	const draw = (view: FractalView, colors: FractalColors) => {
+	const draw = (view: FractalView, colors: FractalColors, quality: 'motion' | 'detail' = 'detail') => {
 		gl.viewport(0, 0, canvas.width, canvas.height);
 		gl.uniform2f(loc.res, canvas.width, canvas.height);
+		gl.uniform1f(loc.cssWidth, cssWidth);
 		gl.uniform1f(loc.scale, view.scale);
 		gl.uniform2f(loc.cx, ...split(view.re));
 		gl.uniform2f(loc.cy, ...split(view.im));
 		gl.uniform1i(loc.maxIter, maxIterAt(view.scale));
-		gl.uniform3f(
-			loc.muted,
-			toLinear(colors.muted[0]),
-			toLinear(colors.muted[1]),
-			toLinear(colors.muted[2]),
-		);
-		gl.uniform3f(
-			loc.accent,
-			toLinear(colors.accent[0]),
-			toLinear(colors.accent[1]),
-			toLinear(colors.accent[2]),
-		);
-		gl.clear(gl.COLOR_BUFFER_BIT);
+		gl.uniform1i(loc.motion, quality === 'motion' ? 1 : 0);
+		gl.uniform1i(loc.precise, view.scale / canvas.width < FLOAT_PIXEL_THRESHOLD ? 1 : 0);
+		const key = paletteKey(colors);
+		if (key !== lastPalette) {
+			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, PALETTE_SIZE, 1, 0,
+				gl.RGBA, gl.UNSIGNED_BYTE, createPalette(colors));
+			lastPalette = key;
+		}
+		// The fullscreen triangle overwrites every pixel; clearing first is redundant.
 		gl.drawArrays(gl.TRIANGLES, 0, 3);
 	};
 
@@ -329,11 +348,13 @@ export function createGlBackend(canvas: HTMLCanvasElement): FractalBackend | nul
 		resize(widthPx: number, heightPx: number) {
 			canvas.width = widthPx;
 			canvas.height = heightPx;
+			cssWidth = canvas.clientWidth || widthPx;
 		},
 		dispose() {
 			// Delete resources but NEVER lose the context: a canvas keeps the same
 			// WebGL context for life, and React StrictMode remounts effects in dev
 			// — a lost context would leave every later mount with a dead renderer.
+			gl.deleteTexture(palette);
 			gl.deleteBuffer(buf);
 			gl.deleteProgram(program);
 		},

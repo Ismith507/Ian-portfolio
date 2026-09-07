@@ -66,6 +66,30 @@ The fractal rendering uses two supporting files:
 - `lib/mandelbrot/original-ported.ts` — the `drawPorted` function the canvas actually uses to draw the fractal
 - `lib/mandelbrot-set.ts` — a `MandelbrotSet` class implementation of the same idea
 
+### Animated background
+
+The separate, site-wide backdrop lives in `app/(general)/fractal-backdrop.tsx` and
+persists across navigation. `fractal-shared.ts` defines its camera destinations:
+Home's wide opening view, Software's Seahorse Valley, Art's branching satellite,
+Music's Elephant Valley, and About's miniature Mandelbrot on the western antenna.
+A continuous zoom path carries the camera through a pullback without a midpoint
+pause; travel takes 1.8–3.6 seconds depending on distance. Reduced motion
+shows each destination as a still image.
+
+`fractal-gl.ts` keeps device resolution, uses native float arithmetic for wide
+views and double-float arithmetic for deep zooms, and samples boundaries twice
+during navigation or four times when settled. Navigation targets 60 renders per
+second; the slow, time-based ambient zoom targets 30.
+
+`fractal-palette.ts` builds a shared 1,024-entry lookup table from ten smoothly
+interpolated shades. Distance coloring keeps the broad halo, while smooth
+escape-time contours recover the fine orbit detail. `fractal-cpu.ts` uses the same
+palette in its time-sliced Canvas fallback. Adjust `GRADIENT_REACH_PX` in
+`fractal-shared.ts` to change the halo's reach in CSS pixels. Local benchmark
+results and remaining limitations are documented in `design/FRACTAL-PERFORMANCE.md`.
+
+Run the backdrop regression checks with `node --test tests/fractal-backdrop.test.cjs`.
+
 ## Deployment
 
 This is a standard Next.js application. The easiest deployment is [Vercel](https://vercel.com), the platform built by the Next.js creators. Connect your GitHub repository to Vercel for automatic deployments on every push to your main branch.

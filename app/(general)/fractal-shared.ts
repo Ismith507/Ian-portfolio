@@ -17,6 +17,7 @@
 export type Rgb = [number, number, number];
 
 export type FractalColors = {
+	background: Rgb;
 	muted: Rgb;
 	accent: Rgb;
 };
@@ -32,7 +33,7 @@ export type FractalView = {
 export type FractalBackend = {
 	kind: 'gl' | 'cpu';
 	/** Per-tick draw while a view transition animates. */
-	frame(view: FractalView, colors: FractalColors): void;
+	frame(view: FractalView, colors: FractalColors, quality?: 'motion' | 'detail'): void;
 	/** Complete draw right now (mount, resize, theme change, reduced motion). */
 	sync(view: FractalView, colors: FractalColors): void;
 	/** Backing store resolution changed (device pixels). */
@@ -59,11 +60,12 @@ export const PAGE_VIEWS = {
 	// Seahorse Valley — the filigree-dense cleft between the main cardioid and
 	// the period-2 bulb. The software page's signature view.
 	software: { re: -0.7435, im: 0.1314, scale: 0.004 } as ViewSpec,
-	// TODO(Ian): pick signature views for these pages. Until then they share
-	// the home view, so navigating to them does not move the camera.
-	art: HOME_VIEW,
-	music: HOME_VIEW,
-	about: HOME_VIEW,
+	// Branching satellite forms above the main set.
+	art: { re: -0.16, im: 1.04, scale: 0.12 } as ViewSpec,
+	// Elephant Valley — repeating, trunk-like curves at the cardioid's cusp.
+	music: { re: 0.275, im: 0.008, scale: 0.035 } as ViewSpec,
+	// A miniature Mandelbrot on the western antenna, with radiating filaments.
+	about: { re: -1.7688, im: 0.0082, scale: 0.045 } as ViewSpec,
 } as const;
 
 export function viewSpecForPath(pathname: string): ViewSpec {
@@ -74,8 +76,69 @@ export function viewSpecForPath(pathname: string): ViewSpec {
 	return PAGE_VIEWS.home;
 }
 
+export type ViewTransition = {
+	duration: number;
+	at(progress: number): FractalView;
+};
+
+// One continuous van Wijk–Nuij zoom path. Unlike two separately eased legs,
+// the camera keeps panning through the widest point of the pullback.
+// Equations adapted from d3-interpolate (ISC; see design/D3-LICENSE.txt).
+export function createViewTransition(
+	from: FractalView,
+	to: FractalView,
+	aspect: number,
+): ViewTransition {
+	const dx = to.re - from.re;
+	const dy = to.im - from.im;
+	const distance = Math.hypot(dx, dy / aspect);
+	let sample: (t: number) => FractalView;
+	let length: number;
+	if (distance < Math.min(from.scale, to.scale) * 1e-6) {
+		length = Math.abs(Math.log(to.scale / from.scale));
+		sample = (t) => ({
+			re: from.re + dx * t,
+			im: from.im + dy * t,
+			scale: from.scale * Math.pow(to.scale / from.scale, t),
+		});
+	} else {
+		const scaleDelta = to.scale * to.scale - from.scale * from.scale;
+		const r0 = -Math.asinh((scaleDelta + 4 * distance * distance) / (4 * from.scale * distance));
+		const r1 = -Math.asinh((scaleDelta - 4 * distance * distance) / (4 * to.scale * distance));
+		const coshStart = Math.cosh(r0);
+		const sinhStart = Math.sinh(r0);
+		length = Math.abs(r1 - r0);
+		sample = (t) => {
+			const r = r0 + (r1 - r0) * t;
+			const pan = (from.scale / (2 * distance)) * (coshStart * Math.tanh(r) - sinhStart);
+			return {
+				re: from.re + dx * pan,
+				im: from.im + dy * pan,
+				scale: (from.scale * coshStart) / Math.cosh(r),
+			};
+		};
+	}
+	return {
+		duration: Math.min(3600, Math.max(1800, 1200 + 220 * length)),
+		at(progress) {
+			if (progress <= 0) return { ...from };
+			if (progress >= 1) return { ...to };
+			// Zero velocity AND acceleration at departure/arrival.
+			const t = progress * progress * progress * (10 + progress * (-15 + 6 * progress));
+			return sample(t);
+		},
+	};
+}
+
+// Ten-minute breathing cycle, with gentle reversals and a stationary start.
+// Driven by elapsed time so the renderer can lower its ambient frame rate.
+export function ambientScale(elapsedMs: number): number {
+	const phase = ((elapsedMs % 600000) / 600000) * Math.PI * 2;
+	return Math.exp(-Math.log(10) * (1 - Math.cos(phase)) / 2);
+}
+
 // ---- fractal tuning (single source of truth for both backends) ----
-export const MAX_BITMAP = 1280; // backing-width cap for the CPU fallback (px)
+export const MAX_BITMAP = 1280; // longest backing dimension for the CPU fallback
 // GL renders at devicePixelRatio up to this — high enough that a Retina 16"
 // viewport (~3024 device px) renders 1:1 with NO compositor upscale blur.
 export const MAX_BITMAP_GL = 4096;
@@ -85,48 +148,26 @@ export const MAX_BITMAP_GL = 4096;
 // only ~4 extra iterations per escaped point.
 export const ESCAPE_R2 = 1e8;
 
-// ---- distance-estimation (DE) line art ----
-// The crispness primitive: each pixel's true distance to the set boundary
-// (d = |z|·ln|z| / |z'|, derivative iterated alongside the orbit) is mapped
-// to screen space, so the boundary renders as CONSTANT-PIXEL-WIDTH line art
-// at any zoom depth, with analytic anti-aliasing from a pixel-footprint
-// smoothstep — no supersampling needed.
-export const DE_LINE_PX = 1.5; // core line width (device px)
-export const DE_LINE_ALPHA = 0.42; // alpha of the line core (matte: no hard pop)
-export const DE_GLOW_PX = 20; // soft halo reach around lines (device px)
-export const DE_GLOW_EXP = 3; // halo falloff exponent (steeper = less bloom)
-export const DE_GLOW_ALPHA = 0.14; // alpha of the halo at the line (matte)
-// The old iteration-field alpha survives as an under-layer beneath the DE
-// line-work — this is the TEXTURE layer; higher = more visible grain/banding
-// structure between the lines.
-export const FAR_FIELD_KEEP = 0.55;
-export const BASE_ITER = 48; // iterations at the widest view
-export const ITER_PER_DECADE = 60; // extra iterations per 10x zoom-in
-export const MAX_ITER_CAP = 320;
-export const START_SCALE = 3; // widest view; iteration budget is relative to it
-
-// Boundary filigree styling — a four-stop ramp over t = n/maxIter, always
-// shades of the ONE accent hue (palette law): muted gray warms into a deep
-// dark red, saturates to the full accent, and brightens to a hot red only in
-// the last sliver hugging the black interior.
-export const RED_START = 0.3; // t where gray starts warming
-export const RED_DEEP = 0.55; // fully deep/dark red by here
-export const RED_FULL = 0.8; // fully saturated accent red by here
-export const RED_HOT = 0.98; // brightened hot red at the set's edge
-export const RED_DEEP_FACTOR = 0.45; // deep shade = accent × this
-export const RED_HOT_MIX = 0.12; // hot shade = accent mixed this far to white (kept low: matte, no white bloom)
-export const ACCENT_ALPHA = 0.35; // alpha once the red has developed
-// Alpha shaping. The far field fades in FROM ZERO over [0, FAR_FADE_END] of t
-// so the gray-to-background edge far from the set is imperceptible — never a
-// hard cutoff; then a quadratic ramp lifts detail toward the boundary.
-export const FAR_FADE_END = 0.22;
-export const ALPHA_BASE = 0.05;
-export const ALPHA_RAMP = 0.28;
-export const FILIGREE_MIN_ITER = 2; // skip only the immediate-escape far field
+// Distance-estimated contours and a broad, continuous exterior gradient.
+// All distances are CSS pixels, so Retina resolution doesn't shrink the halo.
+// Subpixel sampling in the GL renderer resolves the fine boundary filaments.
+export const GRADIENT_REACH_PX = 120;
+export const DETAIL_FREQUENCY = 0.28;
+export const DETAIL_STRENGTH = 0.22;
+// Use float32 only when one pixel spans at least this much of the plane.
+// Deep views retain double-float coordinates and orbit arithmetic.
+export const FLOAT_PIXEL_THRESHOLD = 0.000008;
+export const BASE_ITER = 128;
+export const ITER_PER_DECADE = 80;
+export const MAX_ITER_CAP = 640;
+export const START_SCALE = 3;
 
 // More iterations as the view narrows, so boundary bands stay resolved.
 export const maxIterAt = (scale: number): number =>
 	Math.min(
 		MAX_ITER_CAP,
-		Math.round(BASE_ITER + ITER_PER_DECADE * Math.log10(START_SCALE / scale)),
+		Math.max(
+			BASE_ITER,
+			Math.round(BASE_ITER + ITER_PER_DECADE * Math.log10(START_SCALE / scale)),
+		),
 	);
