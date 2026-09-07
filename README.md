@@ -81,12 +81,12 @@ views and double-float arithmetic for deep zooms, and samples boundaries twice
 during navigation or four times when settled. Navigation targets 60 renders per
 second; the slow, time-based ambient zoom targets 30.
 
-`fractal-palette.ts` builds a shared 1,024-entry lookup table from ten smoothly
-interpolated shades. Distance coloring keeps the broad halo, while smooth
-escape-time contours recover the fine orbit detail. `fractal-cpu.ts` uses the same
-palette in its time-sliced Canvas fallback. Adjust `GRADIENT_REACH_PX` in
-`fractal-shared.ts` to change the halo's reach in CSS pixels. Local benchmark
-results and remaining limitations are documented in `design/FRACTAL-PERFORMANCE.md`.
+`fractal-palette.ts` caches the original muted-gray, deep-red, accent-red, and
+dark-edge gradient in a shared 1,024-entry lookup table. Escape time places the
+colors, with a narrow distance-estimated line and halo. `fractal-cpu.ts` uses the
+same palette in its time-sliced Canvas fallback. The rendering budget remains
+higher than the original color budget so fine geometry stays resolved.
+Historical benchmark results and limitations are in `design/FRACTAL-PERFORMANCE.md`.
 
 Run the backdrop regression checks with `node --test tests/fractal-backdrop.test.cjs`.
 

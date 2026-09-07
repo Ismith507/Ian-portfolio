@@ -16,10 +16,14 @@
 
 import { createPalette, paletteKey, PALETTE_SIZE } from './fractal-palette';
 import {
-	DETAIL_FREQUENCY,
-	DETAIL_STRENGTH,
+	DE_LINE_PX,
+	DE_LINE_ALPHA,
+	DE_GLOW_PX,
+	DE_GLOW_EXP,
+	DE_GLOW_ALPHA,
+	FILIGREE_MIN_ITER,
+	colorIterAt,
 	ESCAPE_R2,
-	GRADIENT_REACH_PX,
 	maxIterAt,
 	type FractalBackend,
 	type FractalColors,
@@ -53,7 +57,6 @@ export function createCpuBackend(
 	let build: Build | null = null;
 	let palette = new Uint8Array(PALETTE_SIZE * 4);
 	let lastPalette = '';
-	let cssWidth = 1;
 	const updatePalette = (colors: FractalColors) => {
 		const key = paletteKey(colors);
 		if (key === lastPalette) return;
@@ -74,6 +77,7 @@ export function createCpuBackend(
 		const s = view.scale;
 		const aspect = bh / bw;
 		const maxIter = maxIterAt(s);
+		const colorIter = colorIterAt(s);
 
 		for (let j = fromRow; j < bh; j++) {
 			if (performance.now() > deadline) return j;
@@ -131,26 +135,27 @@ export function createCpuBackend(
 					}
 				}
 
-				if (n >= maxIter) {
+				if (n >= maxIter || n < FILIGREE_MIN_ITER) {
 					continue;
 				}
 
 				const zm2 = re * re + im * im;
 				const dzm2 = Math.max(dzr * dzr + dzi * dzi, 1e-300);
 				const dist = 0.5 * Math.sqrt(zm2 / dzm2) * Math.log(zm2);
-				const dCss = (dist / s) * cssWidth;
-				const t = Math.exp(-Math.sqrt(dCss / GRADIENT_REACH_PX));
+				const dPx = (dist / s) * bw;
+				const line = 1 - smoothstep(0, DE_LINE_PX, dPx);
+				const glow = Math.pow(Math.max(0, 1 - dPx / DE_GLOW_PX), DE_GLOW_EXP);
+				const deAlpha = Math.max(line * DE_LINE_ALPHA, glow * DE_GLOW_ALPHA);
+				const nu = n + 1 - Math.log2(0.5 * Math.log2(zm2));
+				const t = Math.min(1, Math.max(0, nu / colorIter));
 				const position = t * (PALETTE_SIZE - 1);
 				const lo = Math.floor(position) * 4;
 				const hi = Math.min(lo + 4, palette.length - 4);
 				const w = position - Math.floor(position);
-				const nu = n + 1 - Math.log2(0.5 * Math.log(zm2));
-				const detail = 1 - DETAIL_STRENGTH * smoothstep(0.65, 0.98, t) *
-					(0.5 + 0.5 * Math.cos(nu * DETAIL_FREQUENCY));
 				const off = (j * bw + i) * 4;
 				for (let c = 0; c < 4; c++) {
 					const value = palette[lo + c] + (palette[hi + c] - palette[lo + c]) * w;
-					data[off + c] = Math.round(c < 3 ? value * detail : value);
+					data[off + c] = Math.round(c < 3 ? value : Math.max(255 * deAlpha, value));
 				}
 
 			}
@@ -234,7 +239,6 @@ export function createCpuBackend(
 			if (widthPx === bw && heightPx === bh && buildImg) return;
 			bw = widthPx;
 			bh = heightPx;
-			cssWidth = canvas.clientWidth || widthPx;
 			canvas.width = bw;
 			canvas.height = bh;
 			keyCanvas.width = bw;

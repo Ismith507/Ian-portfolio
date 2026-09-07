@@ -4,6 +4,11 @@ The comparison uses the working copy at the start of this refinement as the
 baseline, including the earlier broad-gradient and page-destination changes.
 It does not compare against Git HEAD.
 
+The gradient was subsequently reverted to the original four-stop escape-time
+ramp and narrow halo, retaining the palette cache, geometry improvements, and
+camera optimizations. The measurements below describe the earlier ten-shade
+version; they have not been rerun for the restored gradient.
+
 ## Changes
 
 - Replace two independently eased camera legs with a continuous van Wijk–Nuij

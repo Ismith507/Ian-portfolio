@@ -15,11 +15,15 @@
 
 import { createPalette, paletteKey, PALETTE_SIZE } from './fractal-palette';
 import {
-	DETAIL_FREQUENCY,
-	DETAIL_STRENGTH,
+	DE_LINE_PX,
+	DE_LINE_ALPHA,
+	DE_GLOW_PX,
+	DE_GLOW_EXP,
+	DE_GLOW_ALPHA,
+	FILIGREE_MIN_ITER,
+	colorIterAt,
 	ESCAPE_R2,
 	FLOAT_PIXEL_THRESHOLD,
-	GRADIENT_REACH_PX,
 	MAX_ITER_CAP,
 	maxIterAt,
 	type FractalBackend,
@@ -41,7 +45,7 @@ const FRAG = `
 precision highp float;
 
 uniform vec2 u_res;
-uniform float u_cssWidth;
+uniform float u_colorIter;
 uniform float u_scale;
 uniform vec2 u_cx; // view center real part as df64 (hi, lo)
 uniform vec2 u_cy; // view center imaginary part as df64 (hi, lo)
@@ -166,25 +170,25 @@ vec4 sampleFractal(vec2 pixel, out float distancePx) {
 		zi = ds(im);
 	}
 
-	if (n >= u_maxIter) return vec4(0.0);
+	if (n >= u_maxIter || float(n) < ${f(FILIGREE_MIN_ITER)}) return vec4(0.0);
 	float zm2 = zr.x * zr.x + zi.x * zi.x;
 
 	// DISTANCE ESTIMATE (Milnor / iq): d = |z|·ln|z| / |z'|, expressed as
 	// 0.5·sqrt(|z|²/|z'|²)·ln(|z|²). Dividing by the view scale converts to a
-	// screen distance for the contour and exterior gradient at any zoom depth.
+	// screen distance for the original narrow line and halo at any zoom depth.
 	float dzm2 = max(dzr * dzr + dzi * dzi, 1e-30);
 	float dist = 0.5 * sqrt(zm2 / dzm2) * log(zm2);
 	distancePx = dist / u_scale * u_res.x;
-	float dCss = dist / u_scale * u_cssWidth;
-	float t = exp(-sqrt(dCss / ${f(GRADIENT_REACH_PX)}));
+	float line = 1.0 - smoothstep(0.0, ${f(DE_LINE_PX)}, distancePx);
+	float glow = pow(max(0.0, 1.0 - distancePx / ${f(DE_GLOW_PX)}), ${f(DE_GLOW_EXP)});
+	float deAlpha = max(line * ${f(DE_LINE_ALPHA)}, glow * ${f(DE_GLOW_ALPHA)});
+	// Keep the original escape-time color placement and dark boundary shade.
+	float nu = float(n) + 1.0 - log2(0.5 * log2(zm2));
+	float t = clamp(nu / u_colorIter, 0.0, 1.0);
 	vec4 color = texture2D(u_palette,
 		vec2((0.5 + t * ${f(PALETTE_SIZE - 1)}) / ${f(PALETTE_SIZE)}, 0.5));
-	// Smooth escape-time contours restore orbit detail inside the halo.
-	// Their phase is independent of the changing iteration budget.
-	float nu = float(n) + 1.0 - log2(0.5 * log(zm2));
-	float detail = 1.0 - ${f(DETAIL_STRENGTH)} * smoothstep(0.65, 0.98, t) *
-		(0.5 + 0.5 * cos(nu * ${f(DETAIL_FREQUENCY)}));
-	return vec4(color.rgb * color.a * detail, color.a);
+	float alpha = max(deAlpha, color.a);
+	return vec4(color.rgb * alpha, alpha);
 }
 
 void main() {
@@ -299,7 +303,7 @@ export function createGlBackend(canvas: HTMLCanvasElement): FractalBackend | nul
 
 	const loc = {
 		res: gl.getUniformLocation(program, 'u_res'),
-		cssWidth: gl.getUniformLocation(program, 'u_cssWidth'),
+		colorIter: gl.getUniformLocation(program, 'u_colorIter'),
 		scale: gl.getUniformLocation(program, 'u_scale'),
 		cx: gl.getUniformLocation(program, 'u_cx'),
 		cy: gl.getUniformLocation(program, 'u_cy'),
@@ -319,12 +323,11 @@ export function createGlBackend(canvas: HTMLCanvasElement): FractalBackend | nul
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 	gl.uniform1i(loc.palette, 0);
 	let lastPalette = '';
-	let cssWidth = 1;
 
 	const draw = (view: FractalView, colors: FractalColors, quality: 'motion' | 'detail' = 'detail') => {
 		gl.viewport(0, 0, canvas.width, canvas.height);
 		gl.uniform2f(loc.res, canvas.width, canvas.height);
-		gl.uniform1f(loc.cssWidth, cssWidth);
+		gl.uniform1f(loc.colorIter, colorIterAt(view.scale));
 		gl.uniform1f(loc.scale, view.scale);
 		gl.uniform2f(loc.cx, ...split(view.re));
 		gl.uniform2f(loc.cy, ...split(view.im));
@@ -348,7 +351,6 @@ export function createGlBackend(canvas: HTMLCanvasElement): FractalBackend | nul
 		resize(widthPx: number, heightPx: number) {
 			canvas.width = widthPx;
 			canvas.height = heightPx;
-			cssWidth = canvas.clientWidth || widthPx;
 		},
 		dispose() {
 			// Delete resources but NEVER lose the context: a canvas keeps the same

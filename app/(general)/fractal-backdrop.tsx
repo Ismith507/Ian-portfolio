@@ -59,13 +59,11 @@ export default function FractalBackdrop() {
 		if (!backend) return;
 
 		const colors: FractalColors = {
-			background: [18, 18, 16],
 			muted: [155, 150, 140],
 			accent: [221, 99, 90],
 		};
 		const readColors = () => {
 			const styles = getComputedStyle(document.documentElement);
-			colors.background = parseChannels(styles.getPropertyValue('--color-bg'), colors.background);
 			colors.muted = parseChannels(
 				styles.getPropertyValue('--color-text-muted'),
 				colors.muted,

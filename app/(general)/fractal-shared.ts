@@ -17,7 +17,6 @@
 export type Rgb = [number, number, number];
 
 export type FractalColors = {
-	background: Rgb;
 	muted: Rgb;
 	accent: Rgb;
 };
@@ -148,12 +147,30 @@ export const MAX_BITMAP_GL = 4096;
 // only ~4 extra iterations per escaped point.
 export const ESCAPE_R2 = 1e8;
 
-// Distance-estimated contours and a broad, continuous exterior gradient.
-// All distances are CSS pixels, so Retina resolution doesn't shrink the halo.
-// Subpixel sampling in the GL renderer resolves the fine boundary filaments.
-export const GRADIENT_REACH_PX = 120;
-export const DETAIL_FREQUENCY = 0.28;
-export const DETAIL_STRENGTH = 0.22;
+// Original boundary line and narrow halo, measured in backing pixels.
+export const DE_LINE_PX = 1.5;
+export const DE_LINE_ALPHA = 0.42;
+export const DE_GLOW_PX = 20;
+export const DE_GLOW_EXP = 3;
+export const DE_GLOW_ALPHA = 0.14;
+export const FAR_FIELD_KEEP = 0.55;
+export const RED_START = 0.3;
+export const RED_DEEP = 0.55;
+export const RED_FULL = 0.8;
+export const RED_DARK = 0.98;
+export const RED_DEEP_FACTOR = 0.45;
+export const RED_DARK_FACTOR = 0.18;
+export const ACCENT_ALPHA = 0.35;
+export const FAR_FADE_END = 0.22;
+export const ALPHA_BASE = 0.05;
+export const ALPHA_RAMP = 0.28;
+export const FILIGREE_MIN_ITER = 2;
+
+// Preserve the original color distribution independently of the larger
+// iteration budget used to resolve fine geometry.
+export const colorIterAt = (scale: number): number =>
+	Math.min(320, Math.max(48, Math.round(48 + 60 * Math.log10(3 / scale))));
+
 // Use float32 only when one pixel spans at least this much of the plane.
 // Deep views retain double-float coordinates and orbit arithmetic.
 export const FLOAT_PIXEL_THRESHOLD = 0.000008;
